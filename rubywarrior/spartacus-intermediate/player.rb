@@ -48,7 +48,15 @@ class Player
     elsif space.captive?
       warrior.rescue! ticking_direction
     else
-      warrior.walk! ticking_direction
+      if warrior.listen.select {|s| s.enemy? && warrior.distance_of(s) <= 2 }.size > 1
+        if warrior.health > 4
+          warrior.detonate! ticking_direction
+        else
+          warrior.rest!
+        end
+      else
+        warrior.walk! ticking_direction
+      end
     end
   end
 
