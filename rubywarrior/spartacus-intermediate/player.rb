@@ -1,12 +1,12 @@
 class Player
   def play_turn(warrior)
-    @ticking = listen_for_ticking warrior
+    @ticking_spaces = listen_for_ticking warrior
 
     @enemy_directions = detect warrior, :enemy?
-    if @ticking.size > 0
+    if outnumbered?
+      warrior.bind! first_enemy_direction_not_towards_ticking(warrior)
+    elsif @ticking_spaces.size > 0
       deal_with_ticking warrior
-    elsif outnumbered?
-      warrior.bind!(@enemy_directions[0])
     elsif @enemy_directions.size == 1
       warrior.attack!(@enemy_directions[0])
     else
@@ -28,18 +28,20 @@ class Player
     warrior.listen.select { |space| space.ticking? }
   end
 
+  def first_enemy_direction_not_towards_ticking warrior
+    ticking_directions = @ticking_spaces.map {|s| warrior.direction_of s }
+    @enemy_directions.detect {|direction| !ticking_directions.include? direction }
+  end
+
   def deal_with_ticking warrior
-    ticking_direction = warrior.direction_of(@ticking[0])
+    ticking_direction = warrior.direction_of(@ticking_spaces[0])
     space = warrior.feel(ticking_direction)
 
-    case space
-    when space.empty?
-      warrior.walk! ticking_direction
-    when space.enemy?
+    if space.enemy?
       warrior.attack! ticking_direction
-    when space.stairs?
+    elsif space.stairs?
       avoid_stairs warrior
-    when space.captive?
+    elsif space.captive?
       warrior.rescue! ticking_direction
     else
       warrior.walk! ticking_direction
