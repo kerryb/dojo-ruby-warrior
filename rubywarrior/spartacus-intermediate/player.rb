@@ -38,7 +38,11 @@ class Player
     space = warrior.feel(ticking_direction)
 
     if space.enemy?
-      warrior.attack! ticking_direction
+      if warrior.look.select(&:enemy?).size > 1
+        warrior.detonate! ticking_direction
+      else
+        warrior.attack! ticking_direction
+      end
     elsif space.stairs?
       avoid_stairs warrior
     elsif space.captive?
