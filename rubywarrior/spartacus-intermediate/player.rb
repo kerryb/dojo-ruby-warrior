@@ -12,9 +12,20 @@ class LookForGloryState < State
   def call
     glory = listen[0]
     if feel( direction_of(glory) ).stairs?
-      avoid_stairs
+      @player.go_to_state :avoid_stairs
     else
       walk! direction_of(glory)
+    end
+  end
+end
+
+class AvoidStairsState < State
+  def call
+    empty_spaces = detect :empty?
+    if feel(empty_spaces[0]).stairs?
+      walk! empty_spaces[1]
+    else
+      walk! empty_spaces[0]
     end
   end
 end
@@ -23,6 +34,7 @@ class Player
   def initialize
     @states = {
       look_for_glory: LookForGloryState.new(self),
+      avoid_stairs: AvoidStairsState.new(self),
     }
   end
 
@@ -43,10 +55,14 @@ class Player
     elsif captives?
     rescue!(@captive_directions[0])
     elsif listen.size > 0
-      @states[:look_for_glory].call
+      go_to_state :look_for_glory
     else
       walk! direction_of_stairs
     end
+  end
+
+  def go_to_state state
+    @states[state].call
   end
 
   private
@@ -71,7 +87,7 @@ class Player
         attack! ticking_direction
       end
     elsif space.stairs?
-      avoid_stairs
+      go_to_state :avoid_stairs
     elsif space.captive?
     rescue! ticking_direction
     else
@@ -99,15 +115,6 @@ class Player
 
   def captives?
     @captive_directions.size > 0
-  end
-
-  def avoid_stairs
-    empty_spaces = detect :empty?
-    if feel(empty_spaces[0]).stairs?
-      walk! empty_spaces[1]
-    else
-      walk! empty_spaces[0]
-    end
   end
 
   def method_missing name, *args
