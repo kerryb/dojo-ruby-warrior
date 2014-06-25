@@ -12,7 +12,7 @@ class LookForGloryState < State
   def call
     glory = listen[0]
     if feel( direction_of(glory) ).stairs?
-      @player.go_to_state :avoid_stairs
+      go_to_state :avoid_stairs
     else
       walk! direction_of(glory)
     end
