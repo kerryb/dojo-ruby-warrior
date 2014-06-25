@@ -1,4 +1,31 @@
+class State
+  def initialize player
+    @player = player
+  end
+
+  def method_missing name, *args
+    @player.send name, *args
+  end
+end
+
+class LookForGloryState < State
+  def call
+    glory = listen[0]
+    if feel( direction_of(glory) ).stairs?
+      avoid_stairs
+    else
+      walk! direction_of(glory)
+    end
+  end
+end
+
 class Player
+  def initialize
+    @states = {
+      look_for_glory: LookForGloryState.new(self),
+    }
+  end
+
   def play_turn(warrior)
     @warrior = warrior
 
@@ -14,13 +41,15 @@ class Player
     elsif health < 20
       rest!
     elsif captives?
-      rescue!(@captive_directions[0])
+    rescue!(@captive_directions[0])
     elsif listen.size > 0
-      look_for_glory
+      @states[:look_for_glory].call
     else
       walk! direction_of_stairs
     end
   end
+
+  private
 
   def listen_for_ticking
     listen.select { |space| space.ticking? }
@@ -44,7 +73,7 @@ class Player
     elsif space.stairs?
       avoid_stairs
     elsif space.captive?
-      rescue! ticking_direction
+    rescue! ticking_direction
     else
       if listen.select {|s| s.enemy? && distance_of(s) <= 2 }.size > 1
         if health > 4
@@ -63,17 +92,6 @@ class Player
       feel(direction).send(type)
     }
   end
-
-  def look_for_glory
-    glory = listen[0]
-    if feel( direction_of(glory) ).stairs?
-      avoid_stairs
-    else
-      walk! direction_of(glory)
-    end
-  end
-
-  private
 
   def outnumbered?
     @enemy_directions.size > 1
