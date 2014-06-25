@@ -1,77 +1,75 @@
 class Player
   def play_turn(warrior)
-    @ticking_spaces = listen_for_ticking warrior
+    @warrior = warrior
 
-    @enemy_directions = detect warrior, :enemy?
+    @ticking_spaces = listen_for_ticking
+    @enemy_directions = detect :enemy?
+    @captive_directions = detect :captive?
     if outnumbered?
-      warrior.bind! first_enemy_direction_not_towards_ticking(warrior)
+      bind! first_enemy_direction_not_towards_ticking
     elsif @ticking_spaces.size > 0
-      deal_with_ticking warrior
+      deal_with_ticking
     elsif @enemy_directions.size == 1
-      warrior.attack!(@enemy_directions[0])
+      attack!(@enemy_directions[0])
+    elsif health < 20
+      rest!
+    elsif captives?
+      rescue!(@captive_directions[0])
+    elsif listen.size > 0
+      look_for_glory
     else
-      @captive_directions = detect warrior, :captive?
-
-      if warrior.health < 20
-        warrior.rest!
-      elsif captives?
-        warrior.rescue!(@captive_directions[0])
-      elsif warrior.listen.size > 0
-        look_for_glory warrior
-      else
-        warrior.walk! warrior.direction_of_stairs
-      end
+      walk! direction_of_stairs
     end
   end
 
-  def listen_for_ticking warrior
-    warrior.listen.select { |space| space.ticking? }
+  def listen_for_ticking
+    listen.select { |space| space.ticking? }
   end
 
-  def first_enemy_direction_not_towards_ticking warrior
-    ticking_directions = @ticking_spaces.map {|s| warrior.direction_of s }
+  def first_enemy_direction_not_towards_ticking
+    ticking_directions = @ticking_spaces.map {|s| direction_of s }
     @enemy_directions.detect {|direction| !ticking_directions.include? direction }
   end
 
-  def deal_with_ticking warrior
-    ticking_direction = warrior.direction_of(@ticking_spaces[0])
-    space = warrior.feel(ticking_direction)
+  def deal_with_ticking
+    ticking_direction = direction_of(@ticking_spaces[0])
+    space = feel(ticking_direction)
 
     if space.enemy?
-      if warrior.look.select(&:enemy?).size > 1
-        warrior.detonate! ticking_direction
+      if look.select(&:enemy?).size > 1
+        detonate! ticking_direction
       else
-        warrior.attack! ticking_direction
+        attack! ticking_direction
       end
     elsif space.stairs?
-      avoid_stairs warrior
+      avoid_stairs
     elsif space.captive?
-      warrior.rescue! ticking_direction
+      rescue! ticking_direction
     else
-      if warrior.listen.select {|s| s.enemy? && warrior.distance_of(s) <= 2 }.size > 1
-        if warrior.health > 4
-          warrior.detonate! ticking_direction
+      if listen.select {|s| s.enemy? && distance_of(s) <= 2 }.size > 1
+        if health > 4
+          detonate! ticking_direction
         else
-          warrior.rest!
+          rest!
         end
       else
-        warrior.walk! ticking_direction
+        walk! ticking_direction
       end
     end
   end
 
-  def detect warrior, type
+  def detect type
     [:forward,:backward,:left,:right].select { |direction|
-      warrior.feel(direction).send(type)
+      feel(direction).send(type)
     }
   end
 
-  def look_for_glory warrior
-    glory = warrior.listen[0]
-    if warrior.feel( warrior.direction_of(glory) ).stairs?
-      avoid_stairs warrior
+  def look_for_glory
+    glory = listen[0]
+    if feel( direction_of(glory) ).stairs?
+      avoid_stairs
     else
-      warrior.walk! warrior.direction_of(glory)
+      walk! direction_of(glory)
     end
   end
 
@@ -85,12 +83,16 @@ class Player
     @captive_directions.size > 0
   end
 
-  def avoid_stairs warrior
-    empty_spaces = detect warrior, :empty?
-    if warrior.feel(empty_spaces[0]).stairs?
-      warrior.walk! empty_spaces[1]
+  def avoid_stairs
+    empty_spaces = detect :empty?
+    if feel(empty_spaces[0]).stairs?
+      walk! empty_spaces[1]
     else
-      warrior.walk! empty_spaces[0]
+      walk! empty_spaces[0]
     end
+  end
+
+  def method_missing name, *args
+    @warrior.send name, *args
   end
 end
